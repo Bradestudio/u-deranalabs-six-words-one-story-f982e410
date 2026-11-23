@@ -16,7 +16,7 @@
 // so a future edit that breaks the form fails loudly instead of producing
 // an invalid entry. The file is written atomically (temp file + rename) so
 // /output/entry.txt is never left half-written.
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 // Final entry (30 Unicode code points, exactly six words):
 // "He buried the gun. It bloomed."
@@ -51,3 +51,11 @@ mkdirSync("/output", { recursive: true });
 const tmpPath = "/output/.entry.txt.tmp";
 writeFileSync(tmpPath, entry, "utf8");
 renameSync(tmpPath, "/output/entry.txt");
+
+// Read-back verification: confirm the bytes on disk are exactly the
+// validated entry. A silent partial or corrupted write would otherwise
+// go unnoticed, since renameSync succeeds once the temp file is in place.
+const written = readFileSync("/output/entry.txt", "utf8");
+if (written !== entry) {
+  throw new Error("read-back mismatch: /output/entry.txt does not match the validated entry");
+}
